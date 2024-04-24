@@ -1,0 +1,116 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: This is CloudFormation Practice
+
+Parameters:
+  InstanceType:
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - t2.small
+
+KeyName:
+  Type: String
+  Default: web-key
+
+
+Resources:
+  Myvpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+  Mysubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Myvpc:
+      CidrBlock: 10.0.10.0/24
+      AvailabilityZone: !Select [ 0,!GetAZs '' ]
+  Mysubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Myvpc:
+      CidrBlock: 10.0.20.0/24
+      AvailabilityZone: !Select [ 1,!GetAZs '' ]
+  MyIG:
+    Type: AWS::EC2::InternetGateway
+  MyVPCAttach:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Myvpc
+      InternetGatewatId: !Ref MyIG
+
+  WebserverSecurityGroup:
+    Properties:
+      GroupDescription: OMG
+      SecurityroupIngress:
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 443
+        ToPort: 443
+        CidrIp: 0.0.0.0/0
+    Tags:
+      - Key: name
+        Value : xxxx
+
+  WebserverInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: ami-04c596dcf23eb98d8
+      KeyName: !Ref KeyName
+      SecurityGroups:
+        - !Ref WebserverSecurityGroup
+      Tags:
+        - Key: Name
+          Value: Webserver
+      UserData: |
+        Fn::Base64: 
+          #!/bin/bash
+          yun install -y httpd
+          systemctl enable --now httpd
+          echo "test CF Template" > /var/www/html/index.html
+  WebserverTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      TargetType: instance
+      Protocol: HTTP
+      Port: 80
+      VpcId: !Ref Myvpc
+  WebserverLoadBanancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Propertie:
+      Name: WebLB
+      Subnets:
+        - !Ref Mysubnet
+        - !Ref Mysubnet2
+      SecurityGroups:
+        - !Ref WebserverSecurityGroup
+      Scheme: Internet-facing
+      Type: application
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: '60'
+
+  WebserverListener:
+    Type: AWS::ElasticLoadBanancingV2::Listener
+    Properties:
+      LoadBanancerArn: !Ref WebserverLoadBanancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn:
+
+  Oupputs:
+    WebserverInstanceIp:
+      Value: !GetAtt WebserverInstance.PublicIp
+
+
+
+
+

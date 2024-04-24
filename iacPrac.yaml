@@ -1,1 +1,59 @@
-ㅁㄴㅇㄻㄴㄻㄴㄻㄴㄻㄴㄹ
+AWSTemplateFormatVersion: '2010-09-09'
+Description: This is CloudFormation Practice
+
+Parameters:
+  InstanceType:
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - t2.small
+
+KeyName:
+  Type: String
+  Default: web-key
+
+
+Resources:
+  WebserverSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Property:
+      GroupDescription: OMG
+      SecurityroupIngress:
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 443
+        ToPort: 443
+        CidrIp: 0.0.0.0/0
+    Tags:
+      - Key: name
+        Value : xxxx
+
+  WebserverInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: ami-04c596dcf23eb98d8
+      KeyName: !Ref KeyName
+      SecurityGroups:
+        - !Ref WebserverSecurityGroup
+      Tags:
+        - Key: Name
+          Value: Webserver
+      UserData: |
+        Fn::Base64: 
+          #!/bin/bash
+          yun install -y httpd
+          systemctl enable --now httpd
+          echo "test CF Template" > /var/www/html/index.html
+  Oupputs:
+    WebserverInstanceIp:
+      Value: !GetAtt WebserverInstance.PublicIp
+
+
+
+
+
