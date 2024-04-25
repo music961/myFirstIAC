@@ -20,12 +20,48 @@ Terraform
     4. 변경 자동화 - 순서에 대해 정확히 몰라도 가능
 - 작업단계
     1. 구성파일(코드) 을 작성
-    2. 초기화 및 계획
-    3. 배포(적용)
+    2. 초기화 -> terraform init
+    3. 계획 -> terraform plan   (생략 가능)
+    4. 배포 -> terraform apply
+    5. 제거 -> terraform destroy
+- 상태 확인 -> terraform show
+- 유효성 검증 -> terraform validate
+- 작업디렉토리에 따라 해당 디렉토리의 모든 파일을 사용
+    -> 하나의 파일을 사용하거나 여러 파일로 나눠서 사용해도 된다.
+- 구성 파일 작성 요소들
+    1. 프로바이더 : 플랫폼을 정의하고 그에 대한 설정값 지정
+    2. 리소스 : 인스턴스 등의 리소스의 스펙을 정의
+    3. 변수 : variable, data, output, locals 블록 등을 활용
+- 변수 내용 정리
+    변수 이름 선언 시에는 예약어는 피해야 한다.
+    변수의 값은 문자열, 숫자, 부울 / 목록, 키-값 형태 가능
+    변수의 값을 재정의
+        1. 명령어 사용 시 -var 옵션
+            terraform apply -var="변수이름=변수값"
+        2. 명령어 사용 시 -var-file 옵션
+            terraform apply -var-file="파일이름"
+                -> 파일 내용에는 변수이름 = "변수값"
+                파일이름은 XXXX.tfvars
+        3. 쉘 환경변수 선언 후 활용
+            export 변수이름=변수값  (변수이름 TF_VARS_XXXX)
+    변수선언
+    variable "변수이름" {
+        type
+        default
+    }
+    output "이름" {
+        출력할 항목
+    }
+    locals {
+        이름 = 값   -> 문자열, 변수값, 혼합
+    }
 
-
-
-
+    data "타입" "이름" {
+        속성값
+    }
+- 명시적 종속성 : 사용자가 직접 순서를 지정 -> depends_on
+- 암시적 종속성 : 알아서 자동으로 선정
+- 비 종속성 : 특별한 순서 없이 병렬화 처리
 
 2. 배포할 리소스 정의
     resource 블록으로 지정
@@ -62,8 +98,53 @@ Terraform
         }
     }
 
+- 벤더 프로비저너
+    chef, puppet, saltstack 에서 제공하는 관리도구들이 있음
 
+resource TYPE NAME {
+    provisioner "local-exec" {
+        command = "명령어"
+    }
+    provisioner "file" {
+        source = "원본파일"
+        destination = "복사할 위치"
+    }
+    provisioner "remote-exec" {
+        inline = ["명령어1","명령어2"]
+    }
+    connection {
+        type = "ssh"
+        user = "사용자이름"
+        password = "비밀번호"   / private_key = file("파일이름")
+        host = "주소"
+    }
+    
+}
 
+모듈
+- 규모가 커질 수록 반복적인 작업은 비효율적이다.
+- 모듈은 여러 리소스의 집합
+- 디렉토리 안의 tf 파일들의 집합
+- 구성파일에 모듈에 대한 설정값 설정
+- terraform init 명령어로 초기화 작업 추가 진행
 
+module "타입" {
+    속성값
+}
 
+반복
+- 테라폼에서 리소스 배포 시에는 resource 블록으로 정의
+- 동일한 종류의 리소스를 배포할 때에는 블록의 구성도 비슷
+- count 속성을 사용해 반복 작업 지원
+- count 로 반복할 횟수를 지정
+- count.index 값을 사용
+
+resource "aws_instance" "vm" {
+    count = 3
+    ami = XXXX
+    instance_type = "t2.micro"
+    tags - {
+        Name = "instance-${count.index}"
+    }
+}
 
